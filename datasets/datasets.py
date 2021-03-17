@@ -8,7 +8,7 @@ divides the dataset into train and test
 """
 
 
-def train_test_random_split(dataset, percentage: float, seed=None: int):
+def train_test_random_split(dataset, percentage: float, seed: int = None):
     split_idx = int(percentage * len(data))
     if seed is not None:
         return random_split(dataset, [split_idx, len(data)-split_idx],
