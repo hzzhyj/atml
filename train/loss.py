@@ -11,13 +11,13 @@ def loss_beta_vae(recon, x, mu, logvar, beta, distribution='gaussian'):
 
     # make sure size matches since x can still be in a grid
     x = x.view(recon.size())
-
+    batch_size = x.size(0)
     reconstruction_loss = 0
     if distribution == 'gaussian':
         recon = F.sigmoid(recon)
-        reconstruction_loss = F.mse_loss(recon, x)
-    else if distribution == 'bernoulli':
-        reconstruction_loss = F.binary_cross_entropy_with_logits(recon, x)
+        reconstruction_loss = F.mse_loss(recon, x, size_average=False).div(batch_size)
+    elif distribution == 'bernoulli':
+        reconstruction_loss = F.binary_cross_entropy_with_logits(recon, x, size_average=False).div(batch_size)
     else:
         raise Exception('distribution must be either gaussian or bernoulli')
 

@@ -2,8 +2,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-import utils
-
 
 class BetaVAEDSprites(nn.Module):
     def __init__(self, n_latents=10):
@@ -12,20 +10,20 @@ class BetaVAEDSprites(nn.Module):
         self.n_latents = n_latents
 
         self.encoder = nn.Sequential(
-            nn.Linear(64*64, 1200)
-            nn.ReLU()
-            nn.Linear(1200, 1200)
-            nn.ReLU()
+            nn.Linear(64*64, 1200),
+            nn.ReLU(),
+            nn.Linear(1200, 1200),
+            nn.ReLU(),
             nn.Linear(1200, n_latents * 2)
         )
 
         self.decoder = nn.Sequential(
-            nn.Linear(n_latents, 1200)
-            nn.Tanh()
-            nn.Linear(1200, 1200)
-            nn.Tanh()
-            nn.Linear(1200, 1200)
-            nn.Tanh()
+            nn.Linear(n_latents, 1200),
+            nn.Tanh(),
+            nn.Linear(1200, 1200),
+            nn.Tanh(),
+            nn.Linear(1200, 1200),
+            nn.Tanh(),
             nn.Linear(1200, 4096)
         )
 
