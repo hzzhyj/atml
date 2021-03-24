@@ -1,5 +1,5 @@
 from math import exp
-from models.beta_vae import *
+from beta_vae import *
 
 class PIDControl():
     def __init__(self, Kp, Ki, Kd):
@@ -31,8 +31,8 @@ class PIDControl():
         return Wk, err_k
 
 class ControlVAEDSprites(BetaVAEDSprites):
-    def __init__(self, n_latents=10, controller_args):
-        super(BetaVAEDSprites, self).__init__(n_latents)
+    def __init__(self, controller_args, n_latents=10):
+        super(ControlVAEDSprites, self).__init__(n_latents)
 
         self.init_controller(controller_args)
 
@@ -53,5 +53,5 @@ class ControlVAEDSprites(BetaVAEDSprites):
             self.C = self.C_max
 
         # Get new beta
-        beta, _ self.beta_controller.pid_update(self.C, KL)
+        beta, _ = self.beta_controller.pid_update(self.C, KL)
         return beta
