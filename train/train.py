@@ -1,4 +1,4 @@
-from atml.train.loss import loss_beta_vae, loss_control_vae, loss_factor_vae, loss_discriminator
+from loss import loss_beta_vae, loss_control_vae, loss_factor_vae, loss_discriminator
 import torch.nn as nn
 import torch
 import torch.nn.functional as F
