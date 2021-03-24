@@ -1,4 +1,4 @@
-from loss import loss_beta_vae, loss_control_vae, loss_factor_vae, loss_discriminator
+from atml.train.loss import loss_beta_vae, loss_control_vae, loss_factor_vae, loss_discriminator
 import torch.nn as nn
 import torch
 import torch.nn.functional as F
@@ -143,6 +143,8 @@ def train_factor_vae(model, discriminator, epochs, train_loader, vae_optimizer, 
                 data2 = data2.to(device)
                             
             x_recon1, mu1, logvar1, z1 = model(data1)
+            if device != None:
+              z1 = z1.to(device)
             dz = discriminator(z1)
             
             recon_loss, kl_div, tc_loss  = loss_factor_vae(x_recon1, data1, mu1, logvar1, dz, distribution)
@@ -161,9 +163,20 @@ def train_factor_vae(model, discriminator, epochs, train_loader, vae_optimizer, 
                 x_recon2, mu2, logvar2, z2 = model(data2)
                 newz = random_permute(z2)
 
+            if device != None:
+              newz = newz.to(device)
+
             dnewz = discriminator(newz)
             dz = discriminator(z1.detach())
-            d_loss = 0.5*(loss_discriminator(dnewz,True) + loss_discriminator(dz,False))
+            
+            ones = torch.ones(dz.size(0), dtype=torch.long)
+            zeros = torch.zeros(dz.size(0), dtype=torch.long)
+
+            if device != None :
+              ones = ones.to(device)
+              zeros = zeros.to(device)
+
+            d_loss = 0.5*(loss_discriminator(dnewz,ones) + loss_discriminator(dz,zeros))
             discriminator_losses.append(d_loss.item())
 
             discriminator_optimizer.zero_grad()

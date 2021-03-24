@@ -21,11 +21,8 @@ def compute_tc_loss(dz):
     loss = (dz[:, :1] - dz[:, 1:]).mean()
     return loss
 
-def loss_discriminator(dz, permuted):
-    if permuted:
-        return F.cross_entropy(dz, torch.ones(dz.size(0), dtype=torch.long), reduction='mean')
-    else:
-        return F.cross_entropy(dz, torch.zeros(dz.size(0), dtype=torch.long), reduction='mean') 
+def loss_discriminator(dz, target):
+    return F.cross_entropy(dz, target, reduction='mean')
 
 
 

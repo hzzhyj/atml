@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from beta_vae import BetaVAEDSprites
+from atml.models.beta_vae import BetaVAEDSprites
 
 class FactorVAEDSprites(BetaVAEDSprites):
     def __init__(self,n_latents=10):
