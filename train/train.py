@@ -183,7 +183,7 @@ def train_factor_vae(model, discriminator, epochs, train_loader, vae_optimizer, 
         discriminator_losses_list.append(discriminator_loss)
  
    
-        print("Epoch " + str(epoch) + " finished, loss: " + str(epoch_loss) + ", recon loss: " + str(recon_loss) + ", kl div: " + str(kl_div))
+        print("Epoch " + str(epoch) + " finished, loss: " + str(epoch_loss) + ", recon loss: " + str(recon_loss) + ", kl div: " + str(kl_div)+ ", TC loss: "+str(tc_loss)+", discriminator loss: "+str(discriminator_loss))
     return train_losses_list, recon_losses_list, kl_divs_list, tc_losses_list, discriminator_losses_list
 
 def test_factor_vae(model, discriminator, test_loader, gamma, distribution, device=None):
