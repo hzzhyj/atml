@@ -1,4 +1,4 @@
-from loss import loss_beta_vae
+from loss import loss_beta_vae, loss_control_vae
 import torch.nn as nn
 import torch
 import torch.nn.functional as F
@@ -53,11 +53,11 @@ def train_control_vae(model, epochs, train_loader, optimizer, distribution, devi
     model.train()
 
     train_loss = []
-    recon_loss_list = []
-    kl_div_list = []
+    recon_losses_list = []
+    kl_divs_list = []
     for epoch in range(epochs):
         epoch_loss = []
-        recon_loss = []
+        recon_losses = []
         kl_divs = []
         for batch_idx, data in enumerate(train_loader):
 
@@ -71,20 +71,20 @@ def train_control_vae(model, epochs, train_loader, optimizer, distribution, devi
             recon, mu, logvar = model(data)
             recon_loss, kl_div = loss_control_vae(recon, data, mu, logvar, distribution)
             # get beta
-            beta = model.update_beta(epoch + 1, kl_div)
+            beta = model.update_beta(epoch + 1, kl_div.clone().item())
             loss = recon_loss + beta * kl_div
             loss.backward()
             optimizer.step()
             # print statistics
             epoch_loss.append(loss.item())
-            recon_loss.append(recon_loss.item())
+            recon_losses.append(recon_loss.item())
             kl_divs.append(kl_div.item())
         epoch_loss = np.mean(epoch_loss)
-        recon_loss = np.mean(recon_loss)
+        recon_loss = np.mean(recon_losses)
         kl_divs = np.mean(kl_divs)
         train_loss.append(epoch_loss)
-        recon_loss_list.append(recon_loss)
-        kl_div_list.append(kl_divs)
+        recon_losses_list.append(recon_loss)
+        kl_divs_list.append(kl_divs)
         print("Epoch " + str(epoch) + " finished, loss: " + str(epoch_loss) + ", recon loss: " + str(recon_loss) + ", kl div: " + str(kl_divs))
     return train_loss, recon_loss_list, kl_div_list
 
