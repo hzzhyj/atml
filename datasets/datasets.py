@@ -35,7 +35,7 @@ def load_dsprites(path, images_only=True):
 class CustomDataset(Dataset):
     def __init__(self, imgs_, length , transform=None):
         self.length = length
-        data = torch.from_numpy(imgs_).unsqueeze(1).float()
+        data = torch.from_numpy(imgs_)
         indices = torch.randperm(data.size(0))[:length]
         self.data = data[indices]
         self.transform = transform
