@@ -55,12 +55,13 @@ def train_control_vae(model, epochs, train_loader, optimizer, distribution, devi
     train_loss = []
     recon_losses_list = []
     kl_divs_list = []
+    iter_idx = 0
     for epoch in range(epochs):
         epoch_loss = []
         recon_losses = []
         kl_divs = []
         for batch_idx, data in enumerate(train_loader):
-
+            iter_idx += 1
             data = data.float()
             if device != None:
                 data = data.to(device)
@@ -71,7 +72,7 @@ def train_control_vae(model, epochs, train_loader, optimizer, distribution, devi
             recon, mu, logvar = model(data)
             recon_loss, kl_div = loss_control_vae(recon, data, mu, logvar, distribution)
             # get beta
-            beta = model.update_beta(epoch + 1, kl_div.clone().item())
+            beta = model.update_beta(iter_idx, kl_div.clone().item())
             loss = recon_loss + beta * kl_div
             loss.backward()
             optimizer.step()
