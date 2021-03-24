@@ -61,7 +61,7 @@ class FactorVAEDSprites(BetaVAEDSprites):
         x = x.view(-1, 64*64)
         mu, logvar = self.encode(x)
         z = self.reparameterize(mu, logvar)
-        x_recon = self.decode(z).view(-1,1,64,64)
+        x_recon = self.decode(z).view(-1,64,64)
         return x_recon, mu, logvar, z.view(-1,self.n_latents)
     
     

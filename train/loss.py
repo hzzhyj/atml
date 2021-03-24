@@ -17,6 +17,18 @@ def compute_kl_div(mu, logvar):
     mu_sq = mu.pow(2)
     return -0.5 * torch.mean(1 + logvar - logvar.exp() - mu_sq)
 
+def compute_tc_loss(dz):
+    loss = (dz[:, :1] - dz[:, 1:]).mean()
+    return loss
+
+def loss_discriminator(dz, permuted):
+    if permuted:
+        return F.cross_entropy(dz, torch.ones(dz.size(0), dtype=torch.long), reduction='mean')
+    else:
+        return F.cross_entropy(dz, torch.zeros(dz.size(0), dtype=torch.long), reduction='mean') 
+
+
+
 def loss_beta_vae(recon, x, mu, logvar, beta, distribution='gaussian'):
 
     # The reconstruction term can be approximated with a single sample from the approximate posterior.
@@ -44,3 +56,15 @@ def loss_control_vae(recon, x, mu, logvar, beta, distribution='gaussian'):
     # KL term loss
     neg_kl_loss = compute_kl_div(mu, logvar)
     return reconstruction_loss, neg_kl_loss
+
+def loss_factor_vae(recon, x, mu, logvar, dz, distribution = 'gaussian'):
+    x = x.view(recon.size())
+    batch_size = x.size(0)
+
+    # Reconstruction term
+    reconstruction_loss = compute_reconstruction_loss(recon, x, distribution, batch_size)
+
+    # KL term loss
+    neg_kl_loss = compute_kl_div(mu, logvar)
+    tc_loss = compute_tc_loss(dz)
+    return reconstruction_loss, neg_kl_loss, tc_loss
