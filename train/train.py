@@ -87,7 +87,7 @@ def train_control_vae(model, epochs, train_loader, optimizer, distribution, devi
         recon_losses_list.append(recon_loss)
         kl_divs_list.append(kl_divs)
         print("Epoch " + str(epoch) + " finished, loss: " + str(epoch_loss) + ", recon loss: " + str(recon_loss) + ", kl div: " + str(kl_divs))
-    return train_loss, recon_loss_list, kl_div_list
+    return train_loss, recon_losses_list, kl_div_list
 
 
 def test_control_vae(model, test_loader, distribution, device=None):
