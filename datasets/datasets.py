@@ -32,13 +32,61 @@ def load_dsprites(path, images_only=True):
     return raw_dataset
 
 
-class CustomDataset(Dataset):
-    def __init__(self, imgs_, length , transform=None):
-        self.length = length
-        data = torch.from_numpy(imgs_)
-        indices = torch.randperm(data.size(0))[:length]
-        self.data = data[indices]
+
+class CustomDSpritesDataset(Dataset): 
+    def __init__(self, dataset, length=None , transform=None):
+        dataset.allow_pickle = True
+        self.imgs = torch.from_numpy(dataset["imgs"])
+        if length != None :
+            self.length = length
+        else : 
+            self.length = self.imgs.size(0)
+        indices = torch.randperm(self.imgs.size(0))[:self.length]
+        self.data = self.imgs[indices]
         self.transform = transform
+        self.nb_factors = len(dataset['metadata'][()][b'latents_sizes'])
+        self.factors_sizes = dataset['metadata'][()][b'latents_sizes']
+        self.factors_names = dataset['metadata'][()][b'latents_names']
+
+    def __getitem__(self, i):
+        img = self.data[i]
+        if self.transform is not None:
+            img = self.transform(img)
+        return img
+
+    def __len__(self):
+        return self.length
+
+    def latent_to_index(self, latents):
+        factors_bases = np.concatenate((self.factors_sizes[::-1].cumprod()[::-1][1:],
+                                    np.array([1,])))
+        return np.dot(latents, factors_bases).astype(int)
+
+    def sample_latent(self, sample_size, fixed_factor = None):
+        samples = np.zeros((sample_size, self.nb_factors))
+        for lat_i, lat_size in enumerate(self.factors_sizes):
+            if fixed_factor == lat_i:
+                fixed_value = np.random.randint(lat_size, size=1)
+                samples[:, lat_i] = np.full(sample_size, fixed_value)
+            else:
+                samples[:, lat_i] = np.random.randint(lat_size, size=sample_size)
+        return samples
+
+    def simulate_images(self, sample_size, fixed_factor = None):
+        latents_sampled = self.sample_latent(sample_size, fixed_factor = fixed_factor)
+        indices_sampled = self.latent_to_index(latents_sampled)
+        imgs_sampled = self.imgs[indices_sampled]
+        return imgs_sampled
+
+    def num_factors(self):
+        return self.nb_factors
+                           
+    def factors_sizes_list(self):
+        return self.factors_sizes                    
+
+class CustomDSpritesDatasetFactorVAE(CustomDSpritesDataset):
+    def __init__(self, dataset, length , transform=None):
+        super(CustomDSpritesDatasetFactorVAE, self).__init__(dataset, length, transform)
 
     def __getitem__(self, i):
         j = random.randrange(len(self))
@@ -48,6 +96,3 @@ class CustomDataset(Dataset):
             img1 = self.transform(img1)
             img2 = self.transform(img2)
         return img1, img2
-
-    def __len__(self):
-        return self.length
