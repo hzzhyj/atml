@@ -85,7 +85,7 @@ class CustomDSpritesDataset(Dataset):
         return self.factors_sizes                    
 
 class CustomDSpritesDatasetFactorVAE(CustomDSpritesDataset):
-    def __init__(self, dataset, length , transform=None):
+    def __init__(self, dataset, length=None , transform=None):
         super(CustomDSpritesDatasetFactorVAE, self).__init__(dataset, length, transform)
 
     def __getitem__(self, i):
