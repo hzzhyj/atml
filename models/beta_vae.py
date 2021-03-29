@@ -63,18 +63,10 @@ class BetaVAEDSprites(nn.Module):
 class Classifier(nn.Module):
     def __init__(self):
         super(Classifier, self).__init__()
-        self.fclayers = nn.Sequential(
-             nn.Linear(10,100),
-             nn.ReLU(),
-             nn.Linear(100,50),
-             nn.ReLU(),
-             nn.Linear(50,20),
-             nn.ReLU(),
-             nn.Linear(20,5)
-         )
+        self.fc = nn.Linear(10,5)         
             
     def forward(self, x):
-        x = self.fclayers(x)
+        x = self.fc(x)
         x = F.log_softmax(x,dim=1)
         return x
              
