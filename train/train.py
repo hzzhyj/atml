@@ -93,7 +93,7 @@ def train_control_vae(model, epochs, train_loader, optimizer, distribution, devi
         recon_losses_list.append(recon_loss)
         kl_divs_list.append(kl_divs)
         print("Epoch " + str(epoch) + " finished, loss: " + str(epoch_loss) + ", recon loss: " + str(recon_loss) + ", kl div: " + str(kl_divs))
-    return train_loss, recon_loss_list, kl_div_list
+    return train_loss, recon_losses_list, kl_divs_list
 
 
 def test_control_vae(model, test_loader, distribution, device=None):
@@ -114,12 +114,12 @@ def test_control_vae(model, test_loader, distribution, device=None):
     test_recon_loss = np.mean(test_recon_loss)
     test_kl_div = np.mean(test_kl_div)
     print("Test recon loss: " + str(test_loss) + ", kl div: " + str(test_kl_div))
-    
-    
+
+
 def random_permute(v):
     batch_size, latent_dim = v.size()
     new_v = torch.zeros_like(v)
-    
+
     for j in range(latent_dim):
         permutation = torch.randperm(batch_size)
         for i in range(batch_size):
@@ -141,16 +141,18 @@ def train_factor_vae(model, discriminator, epochs, train_loader, vae_optimizer, 
         tc_losses = []
         discriminator_losses = []
         for data1, data2 in train_loader:
-            
+
             data1 = data1.float()
             data2 = data2.float()
             if device != None:
                 data1 = data1.to(device)
                 data2 = data2.to(device)
-                            
+
             x_recon1, mu1, logvar1, z1 = model(data1)
+            if device != None:
+              z1 = z1.to(device)
             dz = discriminator(z1)
-            
+
             recon_loss, kl_div, tc_loss  = loss_factor_vae(x_recon1, data1, mu1, logvar1, dz, distribution)
             recon_losses.append(recon_loss.item())
             kl_divs.append(kl_div.item())
@@ -158,7 +160,7 @@ def train_factor_vae(model, discriminator, epochs, train_loader, vae_optimizer, 
 
             epoch_loss = recon_loss + kl_div + torch.mul(gamma, tc_loss)
             epoch_losses.append(epoch_loss.item())
-            
+
             vae_optimizer.zero_grad()
             epoch_loss.backward(retain_graph=True)
             vae_optimizer.step()
@@ -167,28 +169,39 @@ def train_factor_vae(model, discriminator, epochs, train_loader, vae_optimizer, 
                 x_recon2, mu2, logvar2, z2 = model(data2)
                 newz = random_permute(z2)
 
+            if device != None:
+              newz = newz.to(device)
+
             dnewz = discriminator(newz)
             dz = discriminator(z1.detach())
-            d_loss = 0.5*(loss_discriminator(dnewz,True) + loss_discriminator(dz,False))
+            
+            ones = torch.ones(dz.size(0), dtype=torch.long)
+            zeros = torch.zeros(dz.size(0), dtype=torch.long)
+
+            if device != None :
+              ones = ones.to(device)
+              zeros = zeros.to(device)
+
+            d_loss = 0.5*(loss_discriminator(dnewz,ones) + loss_discriminator(dz,zeros))
             discriminator_losses.append(d_loss.item())
 
             discriminator_optimizer.zero_grad()
             d_loss.backward()
             discriminator_optimizer.step()
-        
+
         epoch_loss = np.mean(epoch_losses)
         recon_loss = np.mean(recon_losses)
         kl_div = np.mean(kl_divs)
         tc_loss = np.mean(tc_losses)
         discriminator_loss = np.mean(discriminator_losses)
-        
+
         train_losses_list.append(epoch_loss)
         recon_losses_list.append(recon_loss)
         kl_divs_list.append(kl_div)
         tc_losses_list.append(tc_loss)
         discriminator_losses_list.append(discriminator_loss)
- 
-   
+
+
         print("Epoch " + str(epoch) + " finished, loss: " + str(epoch_loss) + ", recon loss: " + str(recon_loss) + ", kl div: " + str(kl_div)+ ", TC loss: "+str(tc_loss)+", discriminator loss: "+str(discriminator_loss))
     return train_losses_list, recon_losses_list, kl_divs_list, tc_losses_list, discriminator_losses_list
 
@@ -209,3 +222,55 @@ def test_factor_vae(model, discriminator, test_loader, gamma, distribution, devi
             test_losses.append(loss.item())
     test_loss = np.mean(test_losses)
     print("Test loss: " + str(test_loss))
+    
+    
+def train_classifier_metric(model, epochs, train_loader, optimizer, device = None):
+    losses=[]
+    accuracies = []
+    model.train()
+    loss_nll = nn.NLLLoss()
+    for epoch in range(epochs):
+        
+        epoch_losses = []
+        total_correct = 0
+        for z_diff, factor in train_loader:
+            
+            if device!= None:
+                z_diff = z_diff.to(device)
+                factor = factor.to(device)
+            pred = model(z_diff)
+            loss = loss_nll(pred, factor)
+            epoch_losses.append(loss.item())
+            total_correct+=pred.argmax(dim=1).eq(factor).sum().item()
+            
+            
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            
+        epoch_loss = np.mean(epoch_losses)
+        losses.append(epoch_loss)
+        accuracies.append(total_correct/len(train_loader.dataset))
+        print("Epoch " + str(epoch) + " finished, loss: " + str(epoch_loss)+", accuracy:"+str(total_correct/len(train_loader.dataset)))
+    return losses, accuracies
+
+def test_classifier_metric(model, test_loader, device = None):
+    model.eval()
+    loss_nll = nn.NLLLoss()
+    losses= []
+    accuracy = 0
+    with torch.no_grad():
+        for z_diff, factor in test_loader:
+            if device != None:
+                z_diff = z_diff.to(device)
+                factor = factor.to(device)
+            pred = model(z_diff)
+            loss = loss_nll(pred, factor)
+            losses.append(loss)
+            accuracy+=pred.argmax(dim=1).eq(factor).sum().item()
+
+            # report the average loss over the test dataset
+            losses.append(loss.item())
+    test_loss = np.mean(losses)
+    print("Test loss: " + str(test_loss)+ ", test accuracy: "+str(accuracy/len(test_loader.dataset)))
+    
