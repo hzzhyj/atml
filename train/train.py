@@ -216,3 +216,55 @@ def test_factor_vae(model, discriminator, test_loader, gamma, distribution, devi
             test_losses.append(loss.item())
     test_loss = np.mean(test_losses)
     print("Test loss: " + str(test_loss))
+    
+    
+def train_classifier_metric(model, epochs, train_loader, optimizer, device = None):
+    losses=[]
+    accuracies = []
+    model.train()
+    loss_nll = nn.NLLLoss()
+    for epoch in range(epochs):
+        
+        epoch_losses = []
+        total_correct = 0
+        for z_diff, factor in train_loader:
+            
+            if device!= None:
+                z_diff = z_diff.to(device)
+                factor = factor.to(device)
+            pred = model(z_diff)
+            loss = loss_nll(pred, factor)
+            epoch_losses.append(loss.item())
+            total_correct+=pred.argmax(dim=1).eq(factor).sum().item()
+            
+            
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            
+        epoch_loss = np.mean(epoch_losses)
+        losses.append(epoch_loss)
+        accuracies.append(total_correct/len(train_loader.dataset))
+        print("Epoch " + str(epoch) + " finished, loss: " + str(epoch_loss)+", accuracy:"+str(total_correct/len(train_loader.dataset)))
+    return losses, accuracies
+
+def test_classifier_metric(model, test_loader, device = None):
+    model.eval()
+    loss_nll = nn.NLLLoss()
+    losses= []
+    accuracy = 0
+    with torch.no_grad():
+        for z_diff, factor in test_loader:
+            if device != None:
+                z_diff = z_diff.to(device)
+                factor = factor.to(device)
+            pred = model(z_diff)
+            loss = loss_nll(pred, factor)
+            losses.append(loss)
+            accuracy+=pred.argmax(dim=1).eq(factor).sum().item()
+
+            # report the average loss over the test dataset
+            losses.append(loss.item())
+    test_loss = np.mean(losses)
+    print("Test loss: " + str(test_loss)+ ", test accuracy: "+str(accuracy/len(test_loader.dataset)))
+    

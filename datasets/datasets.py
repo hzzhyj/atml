@@ -96,3 +96,21 @@ class CustomDSpritesDatasetFactorVAE(CustomDSpritesDataset):
             img1 = self.transform(img1)
             img2 = self.transform(img2)
         return img1, img2
+    
+class CustomClassifierDataset(Dataset):
+    def __init__(self, factors, z_diffs, transform=None):
+        self.factors = factors
+        self.z_diffs = z_diffs
+        self.length = z_diffs.size(0)
+        self.transform = transform
+        
+    def __len__(self):
+        return self.length
+    
+    def __getitem__(self, i):
+        factor = self.factors[i]
+        z_diff = self.z_diffs[i]
+        if self.transform is not None:
+            factor = self.transform(factor)
+            z_diff = self.transform(z_diff)
+        return z_diff, factor

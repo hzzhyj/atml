@@ -15,7 +15,7 @@ def compute_reconstruction_loss(recon, x, distribution, batch_size):
 
 def compute_kl_div(mu, logvar):
     mu_sq = mu.pow(2)
-    return -0.5 * torch.mean(1 + logvar - logvar.exp() - mu_sq)
+    return -0.5 * torch.mean(torch.sum(1 + logvar - logvar.exp() - mu_sq,1))
 
 def compute_tc_loss(dz):
     loss = (dz[:, :1] - dz[:, 1:]).mean()
