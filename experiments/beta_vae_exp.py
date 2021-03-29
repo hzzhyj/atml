@@ -24,6 +24,7 @@ from datasets import train_test_random_split, load_dsprites
 from train import train_beta_vae, test_beta_vae
 from loss import loss_beta_vae
 from beta_vae import BetaVAEDSprites
+from utils import save_checkpoint, load_checkpoint
 
 # load the dataset
 dataset = load_dsprites("../datasets/dsprites.npz")
@@ -49,18 +50,18 @@ epochs = 10
 beta = 4
 distribution = 'bernoulli'
 print('Training started')
-train_beta_vae(model, epochs, train_loader, optimizer, beta, distribution, device)
+
+loss_list = []
+
+save_checkpoint(model, optimizer, 'betavae_beta4_e0_alldata.pth.tar', loss_list, 0)
+
+for i in range(10):
+    losses = train_beta_vae(model, epochs, train_loader, optimizer, beta, distribution, device)
+    loss_list.append(losses)
+    save_checkpoint(model, optimizer, 'betavae_beta4_e' + str(i+1) + '0_alldata.pth.tar', 
+        loss_list, (i+1)*10)
+    print(str(i+1) + '0 Epochs')
+
 print('Training finished')
-torch.save(model, 'betavae_beta4_e10_alldata.dat')
-
-
-train_beta_vae(model, epochs, train_loader, optimizer, beta, distribution, device)
-torch.save(model, 'betavae_beta4_e20_alldata.dat')
-
-train_beta_vae(model, epochs, train_loader, optimizer, beta, distribution, device)
-torch.save(model, 'betavae_beta4_e30_alldata.dat')
-
-train_beta_vae(model, epochs, train_loader, optimizer, beta, distribution, device)
-torch.save(model, 'betavae_beta4_e40_alldata.dat')
 
 test_beta_vae(model, test_loader, beta, distribution, device)

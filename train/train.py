@@ -12,6 +12,7 @@ def train_beta_vae(model, epochs, train_loader, optimizer, beta, distribution, d
     train_loss = []
     for epoch in range(epochs):
         epoch_loss = []
+        recon_losses = []
         for batch_idx, data in enumerate(train_loader):
 
             data = data.float()
@@ -22,14 +23,16 @@ def train_beta_vae(model, epochs, train_loader, optimizer, beta, distribution, d
             optimizer.zero_grad()
             # forward + backward + optimize
             recon, mu, logvar = model(data)
-            loss = loss_beta_vae(recon, data, mu, logvar, beta, distribution)
+            loss, recon_loss = loss_beta_vae(recon, data, mu, logvar, beta, distribution)
             loss.backward()
             optimizer.step()
             # print statistics
             epoch_loss.append(loss.item())
+            recon_losses.append(recon_loss.item())
         epoch_loss = np.mean(epoch_loss)
-        train_loss.append(epoch_loss)
-        print("Epoch " + str(epoch) + " finished, loss: " + str(epoch_loss))
+        recon_losses = np.mean(recon_losses)
+        train_loss.append((epoch_loss, recon_losses,))
+        print("Epoch " + str(epoch) + " finished, loss: " + str((epoch_loss, recon_losses,)))
     return train_loss
 
 
@@ -37,6 +40,7 @@ def test_beta_vae(model, test_loader, beta, distribution, device=None):
     model.eval()
 
     test_loss = []
+    recon_losses = []
     with torch.no_grad():
         for i, data in enumerate(test_loader):
             data = data.float()
@@ -44,10 +48,12 @@ def test_beta_vae(model, test_loader, beta, distribution, device=None):
                 data = data.to(device)
             # report the average loss over the test dataset
             recon, mu, logvar = model(data)
-            loss = loss_beta_vae(recon, data, mu, logvar, beta, distribution)
+            loss, recon_loss = loss_beta_vae(recon, data, mu, logvar, beta, distribution)
             test_loss.append(loss.item())
+            recon_losses.append(recon_loss.item())
     test_loss = np.mean(test_loss)
-    print("Test loss: " + str(test_loss))
+    recon_losses = np.mean(recon_losses)
+    print("Test total loss: " + str(test_loss) + 'Test recon loss: ' + str(recon_losses))
 
 def train_control_vae(model, epochs, train_loader, optimizer, distribution, device=None):
     model.train()

@@ -44,7 +44,7 @@ def loss_beta_vae(recon, x, mu, logvar, beta, distribution='gaussian'):
 
     # KL term loss
     neg_kl_loss = compute_kl_div(mu, logvar)
-    return reconstruction_loss + beta * neg_kl_loss
+    return reconstruction_loss + beta * neg_kl_loss, reconstruction_loss
 
 def loss_control_vae(recon, x, mu, logvar, beta, distribution='gaussian'):
     x = x.view(recon.size())

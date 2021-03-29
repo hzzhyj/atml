@@ -4,3 +4,4 @@ models/__pycache__/
 train/__pycache__/
 datasets/__pycache__/
 experiments/__pycache__/
+*.pth.tar
