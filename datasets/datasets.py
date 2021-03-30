@@ -2,6 +2,7 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader, random_split, Dataset
 import random
+from torchvision import transforms, datasets
 
 """ 
 divides the dataset into train and test
@@ -31,6 +32,15 @@ def load_dsprites(path, images_only=True):
         return raw_dataset["imgs"]
     return raw_dataset
 
+def load_celeba(path):
+    # please download the dataset manually since google drive does not allow
+    # for big file downloads this way
+    image_size = (64, 64)
+    celeba_data = ImageFolder(path, transforms.Compose([
+                                    transforms.Resize(image_size),
+                                    transforms.ToTensor()
+                                ]))
+    return celeba_data
 
 
 class CustomDSpritesDataset(Dataset): 
