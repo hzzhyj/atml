@@ -92,9 +92,9 @@ def create_beta_vae_classifier_dataset(model, dataset, nb_samples, sample_size, 
                 mu1, _ = model.encode(data1)
                 mu2, _ = model.encode(data2)
 
-                z_diff[j] = mu1.squeeze()-mu2.squeeze()
+                z_diff[j] = torch.abs(mu1.squeeze()-mu2.squeeze())
                     
-            z_diff = torch.abs(torch.mean(z_diff,0))
+            z_diff = torch.mean(z_diff,0)
             z_diffs[i] = z_diff  
         
     data = CustomClassifierDataset(factors, z_diffs)
