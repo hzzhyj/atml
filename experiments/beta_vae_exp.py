@@ -26,6 +26,9 @@ from loss import loss_beta_vae
 from beta_vae import BetaVAEDSprites
 from utils import save_checkpoint, load_checkpoint
 
+torch.manual_seed(2)
+np.random.seed(2)
+
 # load the dataset
 dataset = load_dsprites("../datasets/dsprites.npz")
 dataset = torch.from_numpy(dataset)
@@ -53,12 +56,12 @@ print('Training started')
 
 loss_list = []
 
-save_checkpoint(model, optimizer, 'betavae_beta4_e0_alldata.pth.tar', loss_list, 0)
+save_checkpoint(model, optimizer, 'betavae_beta4_e0_alldata_n.pth.tar', loss_list, 0)
 
 for i in range(10):
     losses = train_beta_vae(model, epochs, train_loader, optimizer, beta, distribution, device)
     loss_list.append(losses)
-    save_checkpoint(model, optimizer, 'betavae_beta4_e' + str(i+1) + '0_alldata.pth.tar', 
+    save_checkpoint(model, optimizer, 'betavae_beta4_e' + str(i+1) + '0_alldata_n.pth.tar', 
         loss_list, (i+1)*10)
     print(str(i+1) + '0 Epochs')
 
