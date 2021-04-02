@@ -17,69 +17,68 @@ def compute_latent_variance(model, dataset, size = 10000, device = None):
         if device != None:
             data = data.to(device)
         data = data.view(-1,64*64)
-        mu, logvar = model.encode(data)
-        z = model.reparameterize(mu, logvar)
-        z = list(z.detach().cpu().numpy())
+        mu, _ = model.encode(data)
+        z = list(mu.detach().cpu().numpy())
         latents= latents+[list(l) for l in z]
 
     global_vars = np.var(latents, axis = 0) 
     return global_vars
 
-def entanglement_metric_factor_vae(model, dataset, nb_samples, sample_size, device = None):
+def entanglement_metric_factor_vae(model, dataset, n_samples, sample_size, n_latents=10, random_seeds=1, device = None):
     model.eval()
+    losses=[]
+    classifications=[]
+    for i in range(random_seeds):
+        loss = 0
+        factors_nb = dataset.num_factors()
+        classification = np.zeros((factors_nb,n_latents))
 
-    loss = 0
-    factors_nb = dataset.num_factors()
-    classification = np.zeros((factors_nb,10))
-    
-    with torch.no_grad():
-        
-        global_vars = compute_latent_variance(model, dataset, device = device)
-    
-        for i in range(nb_samples):
+        with torch.no_grad():
 
-            k = np.random.randint(factors_nb-1)+1
-            imgs_sampled = dataset.simulate_images(sample_size, fixed_factor=k)
-            loader = DataLoader(imgs_sampled, batch_size=64)
-            latents_rep = []
-            for data in loader:
+            global_vars = compute_latent_variance(model, dataset, device = device)
 
-                data = data.float()
+            for i in range(n_samples):
 
-                if device != None:
-                    data = data.to(device)
-                
-                data = data.view(-1,64*64)
-                mu, logvar = model.encode(data)
-                z = model.reparameterize(mu, logvar)
-                z = list(z.detach().cpu().numpy())
-                latents_rep= latents_rep+[list(l) for l in z]
-            latents_var = np.var(latents_rep, axis = 0) 
-            latents_var_normalized = np.divide(latents_var, global_vars)
-            #for i in range(10):
-            #    if global_vars[i] >=1:
-            #        latents_var_normalized[i] = np.inf
+                k = np.random.randint(factors_nb-1)+1
+                imgs_sampled = dataset.simulate_images(sample_size, fixed_factor=k)
+                loader = DataLoader(imgs_sampled, batch_size=64)
+                latents_rep = []
+                for data in loader:
 
-            idx = np.argmin(latents_var_normalized)
-            classification[k,idx]+=1
-        
-    print(classification)
-    for i in range(factors_nb):
-        loss = loss + np.sum(classification[i])- np.max(classification[i])
-    return loss/nb_samples
+                    data = data.float()
 
-def create_beta_vae_classifier_dataset(model, dataset, nb_samples, sample_size, device=None):
+                    if device != None:
+                        data = data.to(device)
+
+                    data = data.view(-1,64*64)
+                    mu, _ = model.encode(data)
+                    z = list(mu.detach().cpu().numpy())
+                    latents_rep= latents_rep+[list(l) for l in z]
+                latents_var = np.var(latents_rep, axis = 0) 
+                latents_var_normalized = np.divide(latents_var, global_vars)
+
+                idx = np.argmin(latents_var_normalized)
+                classification[k,idx]+=1
+
+        classifications.append([classification])
+        for i in range(factors_nb):
+            loss = loss + np.sum(classification[i])- np.max(classification[i])
+        losses.append(loss/n_samples)
+    print(np.mean(classifications,0))
+    return (np.mean(losses))
+
+def create_beta_vae_classifier_dataset(model, dataset, n_samples, sample_size, n_latents=10, device=None):
     model.eval()
     factors_nb = dataset.num_factors()
-    z_diffs = torch.zeros((nb_samples,10))
-    factors = torch.zeros(nb_samples, dtype=torch.long)
+    z_diffs = torch.zeros((n_samples,n_latents))
+    factors = torch.zeros(n_samples, dtype=torch.long)
     with torch.no_grad():
             
-        for i in range(nb_samples):
+        for i in range(n_samples):
 
             k = torch.randint(low=0, high=factors_nb-1, size=(1,), dtype=torch.long)
             factors[i] = k
-            z_diff = torch.zeros((sample_size,10))
+            z_diff = torch.zeros((sample_size,n_latents))
             for j in range(sample_size):
                 imgs_sampled = dataset.simulate_images(2, fixed_factor=k+1)
                 data1 = imgs_sampled[0].float().view(-1,64*64)
@@ -100,17 +99,19 @@ def create_beta_vae_classifier_dataset(model, dataset, nb_samples, sample_size, 
     data = CustomClassifierDataset(factors, z_diffs)
     return data
 
-def entanglement_metric_beta_vae(model, classifier, optimizer, epochs, dataset, nb_samples, sample_size, device=None):
-    
-    data = create_beta_vae_classifier_dataset(model, dataset, nb_samples, sample_size, device=device)
-    data_train, data_test = train_test_random_split(data, 0.8)
-    batch_size = 10
-    train_loader = DataLoader(data_train, batch_size=batch_size,shuffle=True)
-    test_loader = DataLoader(data_test, batch_size=batch_size,shuffle=False) 
-    
-    losses, accuracies = train_classifier_metric(classifier, epochs, train_loader, optimizer, device=device)
-    test_classifier_metric(classifier, test_loader, device=device)
-    return losses, accuracies
+def entanglement_metric_beta_vae(model, classifier, optimizer, epochs, dataset, n_samples, sample_size, n_latents=10, random_seeds=1, device=None):
+    test_accuracies=[]
+    for i in range(random_seeds):
+        classifier.reset_parameters()
+        data = create_beta_vae_classifier_dataset(model, dataset, n_samples, sample_size, n_latents=n_latents, device=device)
+        data_train, data_test = train_test_random_split(data, 0.8)
+        batch_size = 10
+        train_loader = DataLoader(data_train, batch_size=batch_size,shuffle=True)
+        test_loader = DataLoader(data_test, batch_size=batch_size,shuffle=False) 
+
+        losses, accuracies = train_classifier_metric(classifier, epochs, train_loader, optimizer, device=device)
+        test_accuracies.append(test_classifier_metric(classifier, test_loader, device=device))
+    return losses, accuracies, np.mean(test_accuracies)
 
 
     

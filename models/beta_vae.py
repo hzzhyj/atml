@@ -138,12 +138,15 @@ class BetaVAECelebA(nn.Module):
         return recon, mu, logvar
 
 class Classifier(nn.Module):
-    def __init__(self):
+    def __init__(self, n_latents=10, n_factors=5):
         super(Classifier, self).__init__()
-        self.fc = nn.Linear(10,5)         
+        self.fc = nn.Linear(n_latents,n_factors)         
             
     def forward(self, x):
         x = self.fc(x)
         x = F.log_softmax(x,dim=1)
         return x
+    
+    def reset_parameters(self):
+        self.fc.reset_parameters()
              
