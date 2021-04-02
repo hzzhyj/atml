@@ -266,7 +266,6 @@ def test_classifier_metric(model, test_loader, device = None):
                 factor = factor.to(device)
             pred = model(z_diff)
             loss = loss_nll(pred, factor)
-            losses.append(loss)
             accuracy+=pred.argmax(dim=1).eq(factor).sum().item()
 
             # report the average loss over the test dataset
