@@ -251,8 +251,6 @@ def train_classifier_metric(model, epochs, train_loader, optimizer, device = Non
         epoch_loss = np.mean(epoch_losses)
         losses.append(epoch_loss)
         accuracies.append(total_correct/len(train_loader.dataset))
-        if(epoch%200==0):
-            print("Epoch " + str(epoch) + " finished, loss: " + str(epoch_loss)+", accuracy:"+str(total_correct/len(train_loader.dataset)))
     return losses, accuracies
 
 def test_classifier_metric(model, test_loader, device = None):

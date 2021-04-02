@@ -102,6 +102,8 @@ def create_beta_vae_classifier_dataset(model, dataset, n_samples, sample_size, n
 
 def entanglement_metric_beta_vae(model, classifier, optimizer, epochs, dataset, n_samples, sample_size, n_latents=10, random_seeds=1, device=None):
     test_accuracies=[]
+    train_losses=[]
+    train_accuracies=[]
     for i in range(random_seeds):
         classifier.reset_parameters()
         data = create_beta_vae_classifier_dataset(model, dataset, n_samples, sample_size, n_latents=n_latents, device=device)
@@ -111,8 +113,10 @@ def entanglement_metric_beta_vae(model, classifier, optimizer, epochs, dataset, 
         test_loader = DataLoader(data_test, batch_size=batch_size,shuffle=False) 
 
         losses, accuracies = train_classifier_metric(classifier, epochs, train_loader, optimizer, device=device)
+        train_accuracies+=[accuracies]
+        train_losses+=[losses]
         test_accuracies.append(test_classifier_metric(classifier, test_loader, device=device))
-    return losses, accuracies, np.mean(test_accuracies)
+    return train_losses, train_accuracies, np.mean(test_accuracies)
 
 
     
