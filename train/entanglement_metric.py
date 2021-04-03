@@ -64,7 +64,7 @@ def entanglement_metric_factor_vae(model, dataset, n_samples, sample_size, n_lat
         for i in range(factors_nb):
             loss = loss + np.sum(classification[i])- np.max(classification[i])
         losses.append(loss/n_samples)
-    print(losses)
+    print("accuracies : "+str([(1-x) for x in losses]))
     print(np.mean(classifications,0))
     return (np.mean(losses))
 
