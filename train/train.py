@@ -150,14 +150,13 @@ def train_factor_vae(model, discriminator, epochs, train_loader, vae_optimizer, 
 
             x_recon1, mu1, logvar1, z1 = model(data1)
             if device != None:
-              z1 = z1.to(device)
+                z1 = z1.to(device)
             dz = discriminator(z1)
 
             recon_loss, kl_div, tc_loss  = loss_factor_vae(x_recon1, data1, mu1, logvar1, dz, distribution)
             recon_losses.append(recon_loss.item())
             kl_divs.append(kl_div.item())
             tc_losses.append(tc_loss.item())
-
             epoch_loss = recon_loss + kl_div + torch.mul(gamma, tc_loss)
             epoch_losses.append(epoch_loss.item())
 
@@ -170,7 +169,7 @@ def train_factor_vae(model, discriminator, epochs, train_loader, vae_optimizer, 
                 newz = random_permute(z2)
 
             if device != None:
-              newz = newz.to(device)
+                newz = newz.to(device)
 
             dnewz = discriminator(newz)
             dz = discriminator(z1.detach())
@@ -179,8 +178,8 @@ def train_factor_vae(model, discriminator, epochs, train_loader, vae_optimizer, 
             zeros = torch.zeros(dz.size(0), dtype=torch.long)
 
             if device != None :
-              ones = ones.to(device)
-              zeros = zeros.to(device)
+                ones = ones.to(device)
+                zeros = zeros.to(device)
 
             d_loss = 0.5*(loss_discriminator(dnewz,ones) + loss_discriminator(dz,zeros))
             discriminator_losses.append(d_loss.item())
@@ -209,6 +208,7 @@ def test_factor_vae(model, discriminator, test_loader, gamma, distribution, devi
     model.eval()
 
     test_losses = []
+    recon_losses = []
     with torch.no_grad():
         for data, _ in test_loader:
             data = data.float()
@@ -220,8 +220,13 @@ def test_factor_vae(model, discriminator, test_loader, gamma, distribution, devi
             recon_loss, kl_div, tc_loss = loss_factor_vae(recon, data, mu, logvar, dz, distribution)
             loss =recon_loss + kl_div + torch.mul(gamma, tc_loss)
             test_losses.append(loss.item())
+            recon_losses.append(recon_loss.item())
     test_loss = np.mean(test_losses)
+    test_recon_loss = np.mean(recon_losses)
     print("Test loss: " + str(test_loss))
+    print("Test recon loss: " + str(test_recon_loss))
+
+
     
     
 def train_classifier_metric(model, epochs, train_loader, optimizer, device = None):
