@@ -1,5 +1,12 @@
 import torch
+import random
+import numpy as np
 import os
+
+def fix_seed(seed):
+    torch.manual_seed(seed)
+    random.seed(seed)
+    np.random.seed(seed)
 
 def latent_transversal(model, input_img, lower, upper, n_imgs, latent_index):
     x = input_img.view(-1, 64*64)
