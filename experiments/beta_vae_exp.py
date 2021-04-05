@@ -50,18 +50,22 @@ optimizer = torch.optim.Adagrad(model.parameters(), lr=1e-2)
 
 # train the model
 epochs = 10
-beta = 4
+beta = 1
 distribution = 'bernoulli'
 print('Training started')
 
 loss_list = []
 
-save_checkpoint(model, optimizer, 'betavae_beta4_e0_alldata_n.pth.tar', loss_list, 0)
+print('beta and dist')
+print(beta)
+print(distribution)
 
-for i in range(10):
+
+print('Training started')
+for i in range(5):
     losses = train_beta_vae(model, epochs, train_loader, optimizer, beta, distribution, device)
     loss_list.append(losses)
-    save_checkpoint(model, optimizer, 'betavae_beta4_e' + str(i+1) + '0_alldata_n.pth.tar', 
+    save_checkpoint(model, optimizer, 'betavae_beta1_e' + str(i+1) + '0_alldata_n.pth.tar', 
         loss_list, (i+1)*10)
     print(str(i+1) + '0 Epochs')
 
