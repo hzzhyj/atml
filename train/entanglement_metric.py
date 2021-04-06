@@ -112,7 +112,7 @@ def create_beta_vae_classifier_dataset_fast(model, dataset, n_samples, sample_si
             factors[i] = k
 
             # Sample images first - 2 * sample_size
-            imgs_sampled = dataset.simulate_images(2 * sample_size, fixed_factor=k+1).float().view(-1, 64*64)
+            imgs_sampled = dataset.simulate_images(2 * sample_size, fixed_factor=k+1).float()
             # Get the first half
             data1 = imgs_sampled[:sample_size]
             data2 = imgs_sampled[sample_size:]
