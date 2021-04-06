@@ -15,7 +15,6 @@ def compute_latent_variance(model, dataset, size=10000, device=None):
 
         if device != None:
             data = data.to(device)
-        data = data.view(-1,64*64)
         mu, _ = model.encode(data)
         z = list(mu.detach().cpu().numpy())
         latents= latents+[list(l) for l in z]
@@ -51,7 +50,6 @@ def entanglement_metric_factor_vae(model, dataset, n_samples, sample_size, n_lat
                     if device != None:
                         data = data.to(device)
 
-                    data = data.view(-1,64*64)
                     mu, _ = model.encode(data)
                     z = list(mu.detach().cpu().numpy())
                     latents_rep= latents_rep+[list(l) for l in z]
@@ -83,8 +81,8 @@ def create_beta_vae_classifier_dataset(model, dataset, n_samples, sample_size, n
             z_diff = torch.zeros((sample_size,n_latents))
             for j in range(sample_size):
                 imgs_sampled = dataset.simulate_images(2, fixed_factor=k+1)
-                data1 = imgs_sampled[0].float().view(-1,64*64)
-                data2 = imgs_sampled[1].float().view(-1,64*64)
+                data1 = imgs_sampled[0].float()
+                data2 = imgs_sampled[1].float()
 
                 if device != None:
                     data1 = data1.to(device)

@@ -20,7 +20,6 @@ class FactorVAEcnn(BetaVAECelebA):
         super(FactorVAEcnn, self).__init__(n_latents, n_channels)  
         
     def forward(self, x):   
-        x = x.view(-1,1, 64,64)
         mu, logvar = self.encode(x)
         z = self.reparameterize(mu, logvar)
         recon = self.decode(z)
