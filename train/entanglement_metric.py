@@ -32,7 +32,7 @@ def entanglement_metric_factor_vae(model, dataset, n_samples, sample_size, n_lat
     for i in range(random_seeds):
         loss = 0
         factors_nb = dataset.num_factors()
-        classification = np.zeros((factors_nb,n_latents))
+        classification = np.zeros((n_latents,factors_nb))
 
         with torch.no_grad():
 
@@ -59,10 +59,10 @@ def entanglement_metric_factor_vae(model, dataset, n_samples, sample_size, n_lat
                 latents_var_normalized = np.divide(latents_var, global_vars)
 
                 idx = np.argmin(latents_var_normalized)
-                classification[k,idx]+=1
+                classification[idx,k]+=1
 
         classifications.append([classification])
-        for i in range(factors_nb):
+        for i in range(n_latents):
             loss = loss + np.sum(classification[i])- np.max(classification[i])
         losses.append(loss/n_samples)
     print("accuracies : "+str([(1-x) for x in losses]))

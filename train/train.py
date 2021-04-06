@@ -53,7 +53,8 @@ def test_beta_vae(model, test_loader, beta, distribution, device=None):
             recon_losses.append(recon_loss.item())
     test_loss = np.mean(test_loss)
     recon_losses = np.mean(recon_losses)
-    print("Test total loss: " + str(test_loss) + 'Test recon loss: ' + str(recon_losses))
+    #print("Test total loss: " + str(test_loss) + 'Test recon loss: ' + str(recon_losses))
+    return recon_losses
 
 def train_control_vae(model, epochs, train_loader, optimizer, distribution, device=None):
     model.train()
@@ -110,10 +111,11 @@ def test_control_vae(model, test_loader, distribution, device=None):
             recon, mu, logvar = model(data)
             recon_loss, kl_div = loss_control_vae(recon, data, mu, logvar, distribution)
             test_recon_loss.append(recon_loss.item())
-            test_kl_div.append(test_kl_div.item())
+            test_kl_div.append(kl_div.item())
     test_recon_loss = np.mean(test_recon_loss)
     test_kl_div = np.mean(test_kl_div)
-    print("Test recon loss: " + str(test_loss) + ", kl div: " + str(test_kl_div))
+    #print("Test recon loss: " + str(test_recon_loss) + ", kl div: " + str(test_kl_div))
+    return test_recon_loss
 
 
 def random_permute(v):
@@ -223,8 +225,9 @@ def test_factor_vae(model, discriminator, test_loader, gamma, distribution, devi
             recon_losses.append(recon_loss.item())
     test_loss = np.mean(test_losses)
     test_recon_loss = np.mean(recon_losses)
-    print("Test loss: " + str(test_loss))
-    print("Test recon loss: " + str(test_recon_loss))
+    #print("Test loss: " + str(test_loss))
+    #print("Test recon loss: " + str(test_recon_loss))
+    return test_recon_loss
 
 
     
