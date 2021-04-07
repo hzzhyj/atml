@@ -65,7 +65,8 @@ def entanglement_metric_factor_vae(model, dataset, n_samples, sample_size, n_lat
         losses.append(loss/n_samples)
     print("accuracies : "+str([(1-x) for x in losses]))
     print(np.mean(classifications,0))
-    return (np.mean(losses))
+    print (1-np.mean(losses))
+    return ([(1-x) for x in losses])
 
 def create_beta_vae_classifier_dataset(model, dataset, n_samples, sample_size, n_latents=10, device=None):
     model.eval()
@@ -148,4 +149,4 @@ def entanglement_metric_beta_vae(model, classifier, optimizer, epochs, dataset, 
         train_accuracies+=[accuracies]
         train_losses+=[losses]
         test_accuracies.append(test_classifier_metric(classifier, test_loader, device=device))
-    return train_losses, train_accuracies, np.mean(test_accuracies)
+    return train_losses, train_accuracies, test_accuracies
