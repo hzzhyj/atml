@@ -1,7 +1,6 @@
 import numpy as np
 import torch
 from torch.utils.data import DataLoader, random_split, Dataset
-import random
 from torchvision import transforms, datasets
 
 """ 
@@ -52,19 +51,21 @@ class AddUniformNoise(object):
         return tensor + self.m.rsample(sample_shape=tensor.size())
 
 class CustomDSpritesDataset(Dataset): 
-    def __init__(self, dataset, length=None, transform=None):
+    def __init__(self, dataset, length=None , transform=None, seed=None):
         dataset.allow_pickle = True
+        self.seed = seed
         self.imgs = torch.from_numpy(dataset["imgs"])
 
         if length != None :
             self.length = length
+            if seed!=None:
+                indices = torch.randperm(self.imgs.size(0), generator=torch.Generator().manual_seed(seed))[:self.length]
+            else:
+                indices = torch.randperm(self.imgs.size(0))[:self.length]
+            self.data = self.imgs[indices]
         else : 
             self.length = self.imgs.size(0)
-
-        indices = torch.randperm(self.imgs.size(0))[:self.length]
-
-        self.data = self.imgs[indices]
-
+            self.data = self.imgs
         self.transform = transform
         self.nb_factors = len(dataset['metadata'][()][b'latents_sizes'])
         self.factors_sizes = dataset['metadata'][()][b'latents_sizes']
@@ -84,8 +85,9 @@ class CustomDSpritesDataset(Dataset):
                                     np.array([1,])))
         return np.dot(latents, factors_bases).astype(int)
 
-    def sample_latent(self, sample_size, fixed_factor = None):
+    def sample_latent(self, sample_size, fixed_factor=None):
         samples = np.zeros((sample_size, self.nb_factors))
+        
         for lat_i, lat_size in enumerate(self.factors_sizes):
             if fixed_factor == lat_i:
                 fixed_value = np.random.randint(lat_size, size=1)
@@ -107,13 +109,16 @@ class CustomDSpritesDataset(Dataset):
         return self.factors_sizes                    
 
 class CustomDSpritesDatasetFactorVAE(CustomDSpritesDataset):
-    def __init__(self, dataset, length=None , transform=None):
-        super(CustomDSpritesDatasetFactorVAE, self).__init__(dataset, length, transform)
-
+    def __init__(self, dataset, length=None , transform=None, seed= None):
+        super(CustomDSpritesDatasetFactorVAE, self).__init__(dataset, length, transform,seed)
+        if seed!= None:
+            self.shuffled_indices = torch.randperm(self.length, generator=torch.Generator().manual_seed(seed))
+        else:
+            self.shuffled_indices = torch.randperm(self.length)
+            
     def __getitem__(self, i):
-        j = random.randrange(len(self))
         img1 = self.data[i]
-        img2 = self.data[j]
+        img2 = self.data[self.shuffled_indices[i]]
         if self.transform is not None:
             img1 = self.transform(img1)
             img2 = self.transform(img2)

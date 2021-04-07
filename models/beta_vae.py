@@ -8,7 +8,6 @@ class BetaVAEDSprites(nn.Module):
         super(BetaVAEDSprites, self).__init__()
 
         self.n_latents = n_latents
-
         self.encoder = nn.Sequential(
             nn.Linear(64*64, 1200),
             nn.ReLU(),
@@ -29,6 +28,7 @@ class BetaVAEDSprites(nn.Module):
 
     def encode(self, x):
         # estimates mu, log-variance of approximate posterior q(z|x)
+        x = x.view(-1, 64*64)
         parameters = self.encoder(x)
         mu = parameters[:, :self.n_latents]
         logvar = parameters[:, self.n_latents:]
@@ -52,7 +52,6 @@ class BetaVAEDSprites(nn.Module):
 
         # 1) mu,log-variance of the approximate posterior given x
         # 2) mu of the likelihood given a random sample from the posterior given x
-        x = x.view(-1, 64*64)
         mu, logvar = self.encode(x)
         z = self.reparameterize(mu, logvar)
         recon = self.decode(z)
@@ -76,7 +75,8 @@ class BetaVAECelebA(nn.Module):
 
     def __init__(self, n_latents=32, n_channels=3):
         super(BetaVAECelebA, self).__init__()
-
+        
+        self.n_channels = n_channels
         self.n_latents = n_latents
 
         self.encoder = nn.Sequential(
@@ -107,6 +107,7 @@ class BetaVAECelebA(nn.Module):
 
     def encode(self, x):
         # estimates mu, log-variance of approximate posterior q(z|x)
+        x = x.view(-1,self.n_channels,64,64)
         parameters = self.encoder(x)
         mu = parameters[:, :self.n_latents]
         logvar = parameters[:, self.n_latents:]
