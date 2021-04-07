@@ -20,11 +20,12 @@ else:
 
 print('Using device: ' + str(device))
 
-from datasets import train_test_random_split, load_dsprites
+from datasets import train_test_random_split, load_dsprites, CustomDSpritesDataset, AddUniformNoise
 from train import train_beta_vae, test_beta_vae
 from loss import loss_beta_vae
 from beta_vae import BetaVAEDSprites
 from utils import save_checkpoint, load_checkpoint
+from torchvision import transforms
 
 torch.manual_seed(2)
 np.random.seed(2)
