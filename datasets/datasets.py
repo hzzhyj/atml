@@ -42,17 +42,29 @@ def load_celeba(path):
                                 ]))
     return celeba_data
 
+class AddUniformNoise(object):
+    def __init__(self, low=-0.1, high=0.1):
+        self.low = low
+        self.high = high
+        self.m = torch.distributions.uniform.Uniform(self.low, self.high)
+        
+    def __call__(self, tensor):
+        return tensor + self.m.rsample(sample_shape=tensor.size())
 
 class CustomDSpritesDataset(Dataset): 
-    def __init__(self, dataset, length=None , transform=None):
+    def __init__(self, dataset, length=None, transform=None):
         dataset.allow_pickle = True
         self.imgs = torch.from_numpy(dataset["imgs"])
+
         if length != None :
             self.length = length
         else : 
             self.length = self.imgs.size(0)
+
         indices = torch.randperm(self.imgs.size(0))[:self.length]
+
         self.data = self.imgs[indices]
+
         self.transform = transform
         self.nb_factors = len(dataset['metadata'][()][b'latents_sizes'])
         self.factors_sizes = dataset['metadata'][()][b'latents_sizes']

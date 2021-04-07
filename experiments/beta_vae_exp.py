@@ -30,8 +30,14 @@ torch.manual_seed(2)
 np.random.seed(2)
 
 # load the dataset
-dataset = load_dsprites("../datasets/dsprites.npz")
-dataset = torch.from_numpy(dataset)
+# dataset = load_dsprites("../datasets/dsprites.npz")
+# dataset = torch.from_numpy(dataset)
+
+transform = None
+# transform = transforms.Compose([
+#     AddUniformNoise(-.1, .1)
+# ])
+dataset = CustomDSpritesDataset(load_dsprites("../datasets/dsprites.npz", False), transform=transform)
 
 #n_imgs = 50000
 #indices = torch.randperm(dataset.size(0))[:n_imgs]
