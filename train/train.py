@@ -212,7 +212,10 @@ def test_factor_vae(model, discriminator, test_loader, gamma, distribution, devi
     test_losses = []
     recon_losses = []
     with torch.no_grad():
-        for data, _ in test_loader:
+        
+        for data in test_loader:
+            if len(data)==2:
+                data = data[0]
             data = data.float()
             if device != None:
                 data = data.to(device)
