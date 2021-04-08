@@ -177,48 +177,53 @@ def get_factor_and_z_matrices(model, dataset:CustomDSpritesDataset, num_samples:
     
     i = 0
     while i < num_samples:
-      ns = min(num_samples - i, batch_size)
+        ns = min(num_samples - i, batch_size)
 
-      sampled_factors = dataset.sample_latent(ns)
-      sampled_indices = dataset.latent_to_index(sampled_factors)
-      sampled_x = dataset[sampled_indices].type(torch.float).to(device)
-      sampled_z = model.get_latent_representation(sampled_x).cpu().detach().numpy()
+        sampled_factors = dataset.sample_latent(ns)
+        sampled_indices = dataset.latent_to_index(sampled_factors)
+        sampled_x = dataset[sampled_indices].type(torch.float).to(device)
+        sampled_z = model.get_latent_representation(sampled_x).cpu().detach().numpy()
 
-      if factor_matrix is None:
-        factor_matrix = sampled_factors[:]
-        z_matrix = sampled_z[:]
-      else:
-        factor_matrix = np.vstack((factor_matrix, sampled_factors))
-        z_matrix = np.vstack((z_matrix, sampled_z))
+        if factor_matrix is None:
+            factor_matrix = sampled_factors[:]
+            z_matrix = sampled_z[:]
+        else:
+            factor_matrix = np.vstack((factor_matrix, sampled_factors))
+            z_matrix = np.vstack((z_matrix, sampled_z))
 
-      i += ns
-
+        i += ns
+  
     factor_matrix = factor_matrix.transpose()
     z_matrix = z_matrix.transpose()
 
     return factor_matrix, z_matrix
 
-def compute_mig(model, dataset, num_samples=100000, batch_size=1024, device=None):
-    factor_matrix, z_matrix = get_factor_and_z_matrices(model, dataset, num_samples, batch_size, device)
-    z_matrix = discretize_matrix(z_matrix, num_bins=20)
+def compute_mig(model, dataset, num_samples=100000, batch_size=1024, random_seeds=1, device=None, seed= None):
+    mig_scores=[]
+    if seed!=None:
+        torch.random.manual_seed(seed)
+        np.random.seed(seed)
+    for i in range(random_seeds):
+        factor_matrix, z_matrix = get_factor_and_z_matrices(model, dataset, num_samples, batch_size, device)
+        z_matrix = discretize_matrix(z_matrix, num_bins=20)
 
-    factor_matrix = factor_matrix.astype('uint8')
-    z_matrix = z_matrix.astype('uint8') 
+        factor_matrix = factor_matrix.astype('uint8')
+        z_matrix = z_matrix.astype('uint8') 
 
-    mutual_info_matrix = np.zeros((z_matrix.shape[0], factor_matrix.shape[0])) # z_dim * num of factors
-    for i in range(z_matrix.shape[0]):
-        for j in range(factor_matrix.shape[0]):
-            mutual_info_matrix[i, j] = metrics.mutual_info_score(z_matrix[i, :], factor_matrix[j, :])
+        mutual_info_matrix = np.zeros((z_matrix.shape[0], factor_matrix.shape[0])) # z_dim * num of factors
+        for i in range(z_matrix.shape[0]):
+            for j in range(factor_matrix.shape[0]):
+                mutual_info_matrix[i, j] = metrics.mutual_info_score(z_matrix[i, :], factor_matrix[j, :])
 
-    sorted_mi_matrix = np.sort(mutual_info_matrix, axis=0)[::-1]
+        sorted_mi_matrix = np.sort(mutual_info_matrix, axis=0)[::-1]
 
-    factor_entropies = np.zeros(factor_matrix.shape[0])
-    for i in range(len(factor_entropies)):
-        factor_entropies[i] = metrics.mutual_info_score(factor_matrix[i, :], factor_matrix[i, :])
+        factor_entropies = np.zeros(factor_matrix.shape[0])
+        for i in range(len(factor_entropies)):
+            factor_entropies[i] = metrics.mutual_info_score(factor_matrix[i, :], factor_matrix[i, :])
 
-    factor_entropies[factor_entropies == 0] = np.nan
-    mig = np.nanmean(np.divide((sorted_mi_matrix[0, :] - sorted_mi_matrix[1, :]), factor_entropies))
-
-    return mig
+        factor_entropies[factor_entropies == 0] = np.nan
+        mig = np.nanmean(np.divide((sorted_mi_matrix[0, :] - sorted_mi_matrix[1, :]), factor_entropies))
+        mig_scores.append(mig)
+    return mig_scores
 
 
