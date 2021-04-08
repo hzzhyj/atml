@@ -48,7 +48,9 @@ class AddUniformNoise(object):
         self.m = torch.distributions.uniform.Uniform(self.low, self.high)
         
     def __call__(self, tensor):
-        return tensor + self.m.rsample(sample_shape=tensor.size())
+        out = tensor + self.m.rsample(sample_shape=tensor.size())
+        out = torch.clamp(out, min=0, max=1)
+        return out
 
 class CustomDSpritesDataset(Dataset): 
     def __init__(self, dataset, length=None , transform=None, seed=None):
@@ -66,10 +68,17 @@ class CustomDSpritesDataset(Dataset):
         else : 
             self.length = self.imgs.size(0)
             self.data = self.imgs
+        
         self.transform = transform
         self.nb_factors = len(dataset['metadata'][()][b'latents_sizes'])
         self.factors_sizes = dataset['metadata'][()][b'latents_sizes']
         self.factors_names = dataset['metadata'][()][b'latents_names']
+
+        self.posX = dataset['metadata'][()][b'latents_possible_values'][b'posX']
+        self.posY = dataset['metadata'][()][b'latents_possible_values'][b'posY']
+        self.scale = dataset['metadata'][()][b'latents_possible_values'][b'scale']
+        self.shape = dataset['metadata'][()][b'latents_possible_values'][b'shape']
+        self.orientation = dataset['metadata'][()][b'latents_possible_values'][b'orientation']
 
     def __getitem__(self, i):
         img = self.data[i]
@@ -96,7 +105,7 @@ class CustomDSpritesDataset(Dataset):
                 samples[:, lat_i] = np.random.randint(lat_size, size=sample_size)
         return samples
 
-    def simulate_images(self, sample_size, fixed_factor = None):
+    def simulate_images(self, sample_size, fixed_factor=None):
         latents_sampled = self.sample_latent(sample_size, fixed_factor = fixed_factor)
         indices_sampled = self.latent_to_index(latents_sampled)
         imgs_sampled = self.imgs[indices_sampled]
@@ -106,7 +115,20 @@ class CustomDSpritesDataset(Dataset):
         return self.nb_factors
                            
     def factors_sizes_list(self):
-        return self.factors_sizes                    
+        return self.factors_sizes
+
+    def retrieve_latent_values(self, latent_matrix):
+        latent_matrix = latent_matrix.astype(np.int)
+        latent_values = np.zeros_like(latent_matrix).astype(np.float)
+        
+        # ('color', 'shape', 'scale', 'orientation', 'posX', 'posY')
+        latent_values[:, 1] = self.shape[latent_matrix[:, 1]]
+        latent_values[:, 2] = self.scale[latent_matrix[:, 2]]
+        latent_values[:, 3] = self.orientation[latent_matrix[:, 3]]
+        latent_values[:, 4] = self.posX[latent_matrix[:, 4]]
+        latent_values[:, 5] = self.posY[latent_matrix[:, 5]]
+        
+        return torch.from_numpy(latent_values)                  
 
 class CustomDSpritesDatasetFactorVAE(CustomDSpritesDataset):
     def __init__(self, dataset, length=None , transform=None, seed= None):
