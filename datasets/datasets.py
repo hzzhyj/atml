@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+import torch.nn as nn
 from torch.utils.data import DataLoader, random_split, Dataset
 from torchvision import transforms, datasets
 
@@ -47,16 +48,50 @@ class AddUniformNoise(object):
         self.high = high
         self.m = torch.distributions.uniform.Uniform(self.low, self.high)
         
-    def __call__(self, tensor):
+    def __call__(self, tensor, latent_values):
         out = tensor + self.m.rsample(sample_shape=tensor.size())
         out = torch.clamp(out, min=0, max=1)
+        return out
+
+class AddGeneratedNoise(object):
+    def __init__(self, path, device, epsilon=.1):
+        self.epsilon = epsilon
+        self.device = device
+        self.noisenet = NoiseGeneratorNet()
+        self.noisenet.load_state_dict(torch.load(path, map_location=self.device))
+        self.noisenet = self.noisenet.to(self.device)
+        self.noisenet.eval()
+        
+    def __call__(self, tensor, latent_values):
+        noise = self.noisenet(latent_values[:, 1:].type(torch.float).to(self.device))
+        out = torch.clamp(tensor.to(self.device) + self.epsilon * noise, min=0, max=1).detach()
+        return out
+
+class NoiseGeneratorNet(nn.Module):
+    def __init__(self, max_norm=1):
+        super(NoiseGeneratorNet, self).__init__()
+
+        self.max_norm = max_norm
+        self.net = nn.Sequential(
+            nn.Linear(5, 1200),
+            nn.ReLU(),
+            nn.Linear(1200, 1200),
+            nn.ReLU(),
+            nn.Linear(1200, 64 * 64),
+        )
+
+    def forward(self, x):
+        out = self.net(x)
+        out = out.view(-1, 64, 64)
+        out = torch.clamp(out, min=-self.max_norm, max=self.max_norm)
+
         return out
 
 class CustomDSpritesDataset(Dataset): 
     def __init__(self, dataset, length=None , transform=None, seed=None):
         dataset.allow_pickle = True
         self.seed = seed
-        self.imgs = torch.from_numpy(dataset["imgs"])
+        self.imgs = torch.from_numpy(dataset["imgs"]) # shape (n, 64, 64)
 
         if length != None :
             self.length = length
@@ -65,14 +100,19 @@ class CustomDSpritesDataset(Dataset):
             else:
                 indices = torch.randperm(self.imgs.size(0))[:self.length]
             self.data = self.imgs[indices]
+            self.idx = indices
+            
         else : 
             self.length = self.imgs.size(0)
             self.data = self.imgs
+            self.idx = torch.arange(self.length)
         
         self.transform = transform
         self.nb_factors = len(dataset['metadata'][()][b'latents_sizes'])
         self.factors_sizes = dataset['metadata'][()][b'latents_sizes']
         self.factors_names = dataset['metadata'][()][b'latents_names']
+        self.factors_bases = np.concatenate((self.factors_sizes[::-1].cumprod()[::-1][1:],
+                                    np.array([1,])))
 
         self.posX = dataset['metadata'][()][b'latents_possible_values'][b'posX']
         self.posY = dataset['metadata'][()][b'latents_possible_values'][b'posY']
@@ -81,18 +121,18 @@ class CustomDSpritesDataset(Dataset):
         self.orientation = dataset['metadata'][()][b'latents_possible_values'][b'orientation']
 
     def __getitem__(self, i):
+        idx = self.idx[i].item()
         img = self.data[i]
         if self.transform is not None:
-            img = self.transform(img)
+            latent_values = torch.from_numpy(self.indices_to_latent(np.array([idx])))
+            img = self.transform(tensor=img, latent_values=latent_values)
         return img
 
     def __len__(self):
         return self.length
 
     def latent_to_index(self, latents):
-        factors_bases = np.concatenate((self.factors_sizes[::-1].cumprod()[::-1][1:],
-                                    np.array([1,])))
-        return np.dot(latents, factors_bases).astype(int)
+        return np.dot(latents, self.factors_bases).astype(int)
 
     def sample_latent(self, sample_size, fixed_factor=None):
         samples = np.zeros((sample_size, self.nb_factors))
@@ -103,6 +143,7 @@ class CustomDSpritesDataset(Dataset):
                 samples[:, lat_i] = np.full(sample_size, fixed_value)
             else:
                 samples[:, lat_i] = np.random.randint(lat_size, size=sample_size)
+
         return samples
 
     def simulate_images(self, sample_size, fixed_factor=None):
@@ -128,7 +169,16 @@ class CustomDSpritesDataset(Dataset):
         latent_values[:, 4] = self.posX[latent_matrix[:, 4]]
         latent_values[:, 5] = self.posY[latent_matrix[:, 5]]
         
-        return torch.from_numpy(latent_values)                  
+        return torch.from_numpy(latent_values)
+
+    def indices_to_latent(self, indices):
+        subtract_previous = np.zeros(len(indices))
+        latents = np.zeros((len(indices), self.nb_factors))
+        for i in range(self.nb_factors):
+            latents[:, i] = (indices - subtract_previous) // self.factors_bases[i]
+            subtract_previous +=  latents[:, i] * self.factors_bases[i]
+
+        return latents
 
 class CustomDSpritesDatasetFactorVAE(CustomDSpritesDataset):
     def __init__(self, dataset, length=None , transform=None, seed= None):
