@@ -24,16 +24,18 @@ def get_fvae_filename(gamma, losstype, file_list):
 
 def get_bvae_filename(beta, file_list):
     for fn in file_list:
-        if("beta" + str(beta) in fn and "n_losses" in fn):
+        if("beta" + str(beta) in fn and "losses" in fn):
             return fn
     return None
 
 loss_file_path = 'experiments/trained_models'
-loss_filenames = [f for f in os.listdir(loss_file_path) if f[-4:] =='.npy' and not "alldata" in f]
+#loss_filenames = [f for f in os.listdir(loss_file_path) if f[-4:] =='.npy' and not "alldata" in f]
+loss_filenames = [f for f in os.listdir(loss_file_path) if f[-4:] =='.npy' and not "alldata" in f and "nois" in f]
 
 
 cvae_cmax_list = [8, 10, 12]
-fvae_gamma_list = [5, 40]
+#fvae_gamma_list = [5, 40]
+fvae_gamma_list = [5]
 bvae_beta_list = [1, 4]
 # Test get filebane functions
 print(get_cvae_filename(cvae_cmax_list[0], "recon", loss_filenames))
@@ -92,7 +94,7 @@ for beta in bvae_beta_list:
 # plt.legend()
 # plt.xlabel("Epoch")
 # plt.ylabel("Reconstruction Loss")
-# plt.title("Reconstruction loss over time")
+# plt.title("Reconstruction loss over time (Noisy)")
 # plt.show()
 
 
@@ -135,5 +137,5 @@ for beta in bvae_beta_list:
 plt.legend()
 plt.xlabel("Epoch")
 plt.ylabel("KL Divergence")
-plt.title("KL Divergence over time")
+plt.title("KL Divergence over time (Noisy)")
 plt.show()
