@@ -195,7 +195,7 @@ class CustomDSpritesDatasetFactorVAE(CustomDSpritesDataset):
         idx2 = self.idx[self.shuffled_indices[i]].item()
         if self.transform is not None:
             latent_values1 = torch.from_numpy(self.indices_to_latent(np.array([idx1])))
-            latent_values1 = torch.from_numpy(self.indices_to_latent(np.array([idx1])))
+            latent_values2 = torch.from_numpy(self.indices_to_latent(np.array([idx2])))
             img1 = self.transform(tensor=img1, latent_values=latent_values1)
             img2 = self.transform(tensor=img2, latent_values=latent_values2)
         return img1, img2
