@@ -5,18 +5,31 @@ import torch.nn.functional as F
 from torch import optim
 import numpy as np
 from tqdm.notebook import tqdm as ntqdm
+from tqdm.notebook import tqdm
 
 
-def train_beta_vae(model, epochs, train_loader, optimizer, beta, distribution, device=None):
+def train_beta_vae(model, epochs, train_loader, optimizer, beta, distribution, 
+            dataset, transform=None, transform_needs_latents=False, device=None):
     model.train()
 
     train_loss = []
-    for epoch in range(epochs):
+    for epoch in tqdm(range(epochs), leave=False):
         epoch_loss = []
         recon_losses = []
-        for batch_idx, data in enumerate(train_loader):
+        for batch_idx, data_idx in enumerate(tqdm(train_loader, leave=False)):
 
+            data = dataset[data_idx]
+
+            if transform is not None:
+                if transform_needs_latents:
+                    lt_mx = dataset.latent_matrix[data_idx]
+                    latent_values = dataset.retrieve_latent_values(lt_mx)
+                    data = transform(data, latent_values)
+                else:
+                    data = transform(data)
+            
             data = data.float()
+
             if device != None:
                 data = data.to(device)
 
@@ -30,6 +43,7 @@ def train_beta_vae(model, epochs, train_loader, optimizer, beta, distribution, d
             # print statistics
             epoch_loss.append(loss.item())
             recon_losses.append(recon_loss.item())
+
         epoch_loss = np.mean(epoch_loss)
         recon_losses = np.mean(recon_losses)
         train_loss.append((epoch_loss, recon_losses,))
@@ -37,14 +51,28 @@ def train_beta_vae(model, epochs, train_loader, optimizer, beta, distribution, d
     return train_loss
 
 
-def test_beta_vae(model, test_loader, beta, distribution, device=None):
+def test_beta_vae(model, test_loader, beta, distribution, 
+            dataset, transform=None, transform_needs_latents=False, device=None):
     model.eval()
 
     test_loss = []
     recon_losses = []
+
     with torch.no_grad():
-        for i, data in enumerate(test_loader):
+        for i, data_idx in enumerate(tqdm(test_loader, leave=False)):
+
+            data = dataset[data_idx]
+
+            if transform is not None:
+                if transform_needs_latents:
+                    lt_mx = dataset.latent_matrix[data_idx]
+                    latent_values = dataset.retrieve_latent_values(lt_mx)
+                    data = transform(data, latent_values)
+                else:
+                    data = transform(data)
+
             data = data.float()
+
             if device != None:
                 data = data.to(device)
             # report the average loss over the test dataset
