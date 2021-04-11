@@ -20,7 +20,7 @@ else:
 
 print('Using device: ' + str(device))
 
-from datasets import train_test_random_split, load_dsprites, CustomDSpritesDataset, AddUniformNoise
+from datasets import train_test_random_split, load_dsprites, CustomDSpritesDataset, AddUniformNoise, AddGeneratedNoise
 from train import train_beta_vae, test_beta_vae
 from loss import loss_beta_vae
 from beta_vae import BetaVAEDSprites
@@ -35,9 +35,8 @@ np.random.seed(2)
 # dataset = torch.from_numpy(dataset)
 
 transform = None
-# transform = transforms.Compose([
-#     AddUniformNoise(-.1, .1)
-# ])
+# transform = AddUniformNoise(-.1, .1)
+transform = AddGeneratedNoise(module_path + "/datasets/noisenet.pth", device)
 dataset = CustomDSpritesDataset(load_dsprites("../datasets/dsprites.npz", False), transform=transform)
 
 #n_imgs = 50000
