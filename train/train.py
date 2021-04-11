@@ -4,6 +4,7 @@ import torch
 import torch.nn.functional as F
 from torch import optim
 import numpy as np
+from tqdm.notebook import tqdm as ntqdm
 
 
 def train_beta_vae(model, epochs, train_loader, optimizer, beta, distribution, device=None):
@@ -51,24 +52,40 @@ def test_beta_vae(model, test_loader, beta, distribution, device=None):
             loss, recon_loss = loss_beta_vae(recon, data, mu, logvar, beta, distribution)
             test_loss.append(loss.item())
             recon_losses.append(recon_loss.item())
+
     test_loss = np.mean(test_loss)
     recon_losses = np.mean(recon_losses)
     #print("Test total loss: " + str(test_loss) + 'Test recon loss: ' + str(recon_losses))
     return recon_losses
 
-def train_control_vae(model, epochs, train_loader, optimizer, distribution, device=None):
+def train_control_vae(model, epochs, train_loader, optimizer, distribution,
+                    dataset, transform=None, transform_needs_latents=False, device=None):
     model.train()
 
     train_loss = []
     recon_losses_list = []
     kl_divs_list = []
     iter_idx = 0
-    for epoch in range(epochs):
+
+    for epoch in ntqdm(range(epochs), leave=False):
         epoch_loss = []
         recon_losses = []
         kl_divs = []
-        for batch_idx, data in enumerate(train_loader):
+
+        for batch_idx, data_idx in enumerate(ntqdm(train_loader, leave=False)):
+
             iter_idx += 1
+
+            data = dataset[data_idx]
+
+            if transform is not None:
+                if transform_needs_latents:
+                    lt_mx = dataset.latent_matrix[data_idx]
+                    latent_values = dataset.retrieve_latent_values(lt_mx)
+                    data = transform(data, latent_values)
+                else:
+                    data = transform(data)
+
             data = data.float()
             if device != None:
                 data = data.to(device)
@@ -87,6 +104,7 @@ def train_control_vae(model, epochs, train_loader, optimizer, distribution, devi
             epoch_loss.append(loss.item())
             recon_losses.append(recon_loss.item())
             kl_divs.append(kl_div.item())
+
         epoch_loss = np.mean(epoch_loss)
         recon_loss = np.mean(recon_losses)
         kl_divs = np.mean(kl_divs)
@@ -97,14 +115,28 @@ def train_control_vae(model, epochs, train_loader, optimizer, distribution, devi
     return train_loss, recon_losses_list, kl_divs_list
 
 
-def test_control_vae(model, test_loader, distribution, device=None):
+def test_control_vae(model, test_loader, distribution, 
+        dataset, transform=None, transform_needs_latents=False, device=None):
     model.eval()
 
     test_recon_loss = []
     test_kl_div = []
+
     with torch.no_grad():
-        for i, data in enumerate(test_loader):
+        for i, data_idx in enumerate(ntqdm(test_loader, leave=False)):
+
+            data = dataset[data_idx]
+
+            if transform is not None:
+                if transform_needs_latents:
+                    lt_mx = dataset.latent_matrix[data_idx]
+                    latent_values = dataset.retrieve_latent_values(lt_mx)
+                    data = transform(data, latent_values)
+                else:
+                    data = transform(data)
+
             data = data.float()
+            
             if device != None:
                 data = data.to(device)
             # report the average loss over the test dataset
