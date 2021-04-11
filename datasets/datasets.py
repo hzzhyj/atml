@@ -48,7 +48,7 @@ class AddUniformNoise(object):
         self.high = high
         self.m = torch.distributions.uniform.Uniform(self.low, self.high)
         
-    def __call__(self, tensor, latent_values):
+    def __call__(self, tensor, latent_values=None):
         out = tensor + self.m.rsample(sample_shape=tensor.size())
         out = torch.clamp(out, min=0, max=1)
         return out
@@ -63,9 +63,12 @@ class AddGeneratedNoise(object):
         self.noisenet.eval()
         
     def __call__(self, tensor, latent_values):
-        noise = self.noisenet(latent_values[:, 1:].type(torch.float).to(self.device))
-        out = torch.clamp(tensor.to(self.device) + self.epsilon * noise, min=0, max=1).detach()
-        return out
+        with torch.no_grad():
+            # noise = self.noisenet(latent_values[:, 1:].type(torch.float).to(self.device))
+            # print(tensor.shape)
+            # out = torch.clamp(tensor.to(self.device) + self.epsilon * noise, min=0, max=1).detach()
+            out = tensor
+            return out
 
 class NoiseGeneratorNet(nn.Module):
     def __init__(self, max_norm=1):
@@ -88,7 +91,7 @@ class NoiseGeneratorNet(nn.Module):
         return out
 
 class CustomDSpritesDataset(Dataset): 
-    def __init__(self, dataset, length=None , transform=None, seed=None):
+    def __init__(self, dataset, length=None , transform=None, transform_needs_latents=False, seed=None):
         dataset.allow_pickle = True
         self.seed = seed
         self.imgs = torch.from_numpy(dataset["imgs"]) # shape (n, 64, 64)
@@ -108,6 +111,8 @@ class CustomDSpritesDataset(Dataset):
             self.idx = torch.arange(self.length)
         
         self.transform = transform
+        self.transform_needs_latents = transform_needs_latents 
+
         self.nb_factors = len(dataset['metadata'][()][b'latents_sizes'])
         self.factors_sizes = dataset['metadata'][()][b'latents_sizes']
         self.factors_names = dataset['metadata'][()][b'latents_names']
@@ -120,12 +125,33 @@ class CustomDSpritesDataset(Dataset):
         self.shape = dataset['metadata'][()][b'latents_possible_values'][b'shape']
         self.orientation = dataset['metadata'][()][b'latents_possible_values'][b'orientation']
 
+    
+        # ('color', 'shape', 'scale', 'orientation', 'posX', 'posY')
+        self.latent_values = np.zeros((40, 6)).astype(float) # 40 is the maximum variations in a latent factor
+        self.latent_values[:len(self.shape), 1] = self.shape
+        self.latent_values[:len(self.scale), 2] = self.scale
+        self.latent_values[:len(self.orientation), 3] = self.orientation
+        self.latent_values[:len(self.posX), 4] = self.posX
+        self.latent_values[:len(self.posY), 5] = self.posY
+
+        self.latent_matrix = self.indices_to_latent(self.idx).astype(np.uint8)
+        columns = np.arange(self.nb_factors, dtype=np.intp)
+        self.latent_columns = columns[np.newaxis, :]
+
+        if seed!= None:
+            self.shuffled_indices = torch.randperm(self.length, generator=torch.Generator().manual_seed(seed))
+        else:
+            self.shuffled_indices = torch.randperm(self.length)
+
     def __getitem__(self, i):
-        idx = self.idx[i].item()
         img = self.data[i]
         if self.transform is not None:
-            latent_values = torch.from_numpy(self.indices_to_latent(np.array([idx])))
-            img = self.transform(tensor=img, latent_values=latent_values)
+            if self.transform_needs_latents:
+                lt_mx = np.expand_dims(self.latent_matrix[i], axis=0)
+                latent_values = self.retrieve_latent_values(lt_mx)
+                img = self.transform(tensor=img, latent_values=latent_values)
+            else:
+                img = self.transform(img)
         return img
 
     def __len__(self):
@@ -159,15 +185,18 @@ class CustomDSpritesDataset(Dataset):
         return self.factors_sizes
 
     def retrieve_latent_values(self, latent_matrix):
-        latent_matrix = latent_matrix.astype(np.int)
-        latent_values = np.zeros_like(latent_matrix).astype(np.float)
+        latent_matrix = latent_matrix.astype(np.intp)
+        latent_values = self.latent_values[latent_matrix, self.latent_columns]
+
+        # latent_matrix = latent_matrix.astype(np.int)
+        # latent_values = np.zeros_like(latent_matrix).astype(np.float)
         
-        # ('color', 'shape', 'scale', 'orientation', 'posX', 'posY')
-        latent_values[:, 1] = self.shape[latent_matrix[:, 1]]
-        latent_values[:, 2] = self.scale[latent_matrix[:, 2]]
-        latent_values[:, 3] = self.orientation[latent_matrix[:, 3]]
-        latent_values[:, 4] = self.posX[latent_matrix[:, 4]]
-        latent_values[:, 5] = self.posY[latent_matrix[:, 5]]
+        # # ('color', 'shape', 'scale', 'orientation', 'posX', 'posY')
+        # latent_values[:, 1] = self.shape[latent_matrix[:, 1]]
+        # latent_values[:, 2] = self.scale[latent_matrix[:, 2]]
+        # latent_values[:, 3] = self.orientation[latent_matrix[:, 3]]
+        # latent_values[:, 4] = self.posX[latent_matrix[:, 4]]
+        # latent_values[:, 5] = self.posY[latent_matrix[:, 5]]
         
         return torch.from_numpy(latent_values)
 

@@ -34,16 +34,22 @@ np.random.seed(2)
 # dataset = load_dsprites("../datasets/dsprites.npz")
 # dataset = torch.from_numpy(dataset)
 
-transform = None
+# transform = None
+# transform_needs_latents = False
+
 # transform = AddUniformNoise(-.1, .1)
+# transform_needs_latents = False
+
 transform = AddGeneratedNoise(module_path + "/datasets/noisenet.pth", device)
-dataset = CustomDSpritesDataset(load_dsprites("../datasets/dsprites.npz", False), transform=transform)
+transform_needs_latents = True
+
+dataset = CustomDSpritesDataset(load_dsprites("../datasets/dsprites.npz", False))
 
 #n_imgs = 50000
 #indices = torch.randperm(dataset.size(0))[:n_imgs]
 #dataset = dataset[indices]
 
-data_train, data_test = train_test_random_split(dataset, 0.8)
+data_train, data_test = train_test_random_split(dataset.idx, 0.8)
 
 batch_size = 64
 train_loader = DataLoader(data_train, batch_size=batch_size, shuffle=True)
@@ -69,7 +75,8 @@ print(distribution)
 
 print('Training started')
 for i in range(5):
-    losses = train_beta_vae(model, epochs, train_loader, optimizer, beta, distribution, device)
+    losses = train_beta_vae(model, epochs, train_loader, optimizer, beta, distribution, 
+            dataset, transform, transform_needs_latents, device)
     loss_list.append(losses)
     save_checkpoint(model, optimizer, 'betavae_beta1_e' + str(i+1) + '0_alldata_n.pth.tar', 
         loss_list, (i+1)*10)
@@ -77,4 +84,5 @@ for i in range(5):
 
 print('Training finished')
 
-test_beta_vae(model, test_loader, beta, distribution, device)
+test_beta_vae(model, test_loader, beta, distribution, 
+    dataset, transform, transform_needs_latents, device)
