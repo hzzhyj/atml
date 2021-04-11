@@ -138,6 +138,11 @@ class CustomDSpritesDataset(Dataset):
         columns = np.arange(self.nb_factors, dtype=np.intp)
         self.latent_columns = columns[np.newaxis, :]
 
+        if seed!= None:
+            self.shuffled_indices = torch.randperm(self.length, generator=torch.Generator().manual_seed(seed))
+        else:
+            self.shuffled_indices = torch.randperm(self.length)
+
     def __getitem__(self, i):
         img = self.data[i]
         if self.transform is not None:
