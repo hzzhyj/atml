@@ -143,6 +143,12 @@ class BetaVAECelebA(nn.Module):
 
         # should return  (likelihood mu, posterior mu, posterior log-variance)
         return recon, mu, logvar
+    
+    def get_latent_representation(self, x):
+        mu, logvar = self.encode(x)
+        z = self.reparameterize(mu, logvar)
+
+        return z.view(-1, self.n_latents)
 
 class Classifier(nn.Module):
     def __init__(self, n_latents=10, n_factors=5):
