@@ -64,10 +64,9 @@ class AddGeneratedNoise(object):
         
     def __call__(self, tensor, latent_values):
         with torch.no_grad():
-            # noise = self.noisenet(latent_values[:, 1:].type(torch.float).to(self.device))
+            noise = self.noisenet(latent_values[:, 1:].type(torch.float).to(self.device))
             # print(tensor.shape)
-            # out = torch.clamp(tensor.to(self.device) + self.epsilon * noise, min=0, max=1).detach()
-            out = tensor
+            out = torch.clamp(tensor.to(self.device) + self.epsilon * noise, min=0, max=1).detach()
             return out
 
 class NoiseGeneratorNet(nn.Module):
